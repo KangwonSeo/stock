@@ -104,7 +104,10 @@ def visitAllNasdaq(NasdaqList):
     for i in NasdaqList:
         res = requests.get(nasdaqUrlBase+i+nasdaqUrlTail)
         bs = BeautifulSoup(res.content, "html.parser")
-        priceNow = bs.find('div', {'class':'price'}).get_text()
+        priceNow = bs.find('div', {'class':'price'})
+        if priceNow is None :
+            continue
+        priceNow = priceNow.get_text()
         if len(priceNow) == 0 :
             continue
         priceNow = priceNow.split()[0]
@@ -116,13 +119,20 @@ def visitAllNasdaq(NasdaqList):
             continue
         for j in url.find_all('td'):
             if flag == 1:
+                if "Buy" not in j.get_text():
+                    break
+                flag = 0
+            if flag == 2:
                 goalPrice = j.get_text()
                 if "N/A" in goalPrice:
                     break
                 goalPrice = float(goalPrice[1:].replace(',',''))
                 break
-            if "Consensus Price" in j.get_text():
+            if "Consensus Rating: " == j.get_text():
                 flag=1
+            if "Consensus Price" in j.get_text():
+                flag=2
+
         if type(goalPrice) is not float:
             continue
         value = goalPrice * tuningValueN
@@ -132,14 +142,13 @@ def visitAllNasdaq(NasdaqList):
             howMuch = (value / priceNow) * 100
             print(howMuch, "%")
             resultStr += "percent = " + str(howMuch) + "\n"
-
 # main
 startTime = time.time()
 print("start time : ", startTime)
 resultStr += "tuningVal = " + str(tuningValue) + "\n"
 resultStr += "tuningVal(Nasdaq) = " + str(tuningValueN) + "\n"
-visitAllKospi(cacheCode.loadKospiCode())
-visitAllKosdaq(cacheCode.loadKosdaqCode())
+#visitAllKospi(cacheCode.loadKospiCode())
+#visitAllKosdaq(cacheCode.loadKosdaqCode())
 visitAllNasdaq(cacheCode.loadNasdaqCompany(nasdaqUrlBase))
 endTime = time.time()
 print("end time : ", endTime)
