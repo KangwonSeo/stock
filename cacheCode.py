@@ -59,3 +59,11 @@ def loadKosdaqCode():
     kosdaqCodeList.close()
     return ret
 
+def loadNasdaqCompany(url):
+    ret = []
+    res = requests.get(url)
+    bs = BeautifulSoup(res.content, "html.parser")
+    divList = bs.find('table').find_all('div', {'class':'ticker-area'})
+    for i in divList:
+        ret.append(i.get_text())
+    return ret

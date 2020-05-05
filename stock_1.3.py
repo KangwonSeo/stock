@@ -6,8 +6,11 @@ from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 
 InfoUrlBase="https://navercomp.wisereport.co.kr/v2/company/c1010001.aspx?cmp_cd="
+nasdaqUrlBase="https://www.marketbeat.com/stocks/NASDAQ/"
+nasdaqUrlTail="/price-target/"
 today = datetime.now()
 tuningValue = 0.7
+tuningValueN = 0.5
 numOfDay = 15
 numReview=2
 resultStr = ""
@@ -75,7 +78,6 @@ def visitAllKospi(KospiList):
         if cnt > progressList[progress] :
             progress += 1
             print(str(progress)+"0% progress")
-
     print("Kospi searching complete")
 
 def visitAllKosdaq(KosdaqList):
@@ -94,16 +96,52 @@ def visitAllKosdaq(KosdaqList):
         if cnt > progressList[progress]:
             progress += 1
             print(str(progress) + "0% progress")
-
     print("Kosdaq searching complete")
+
+def visitAllNasdaq(NasdaqList):
+    global resultStr
+    resultStr += "Nasdaq company\n"
+    for i in NasdaqList:
+        res = requests.get(nasdaqUrlBase+i+nasdaqUrlTail)
+        bs = BeautifulSoup(res.content, "html.parser")
+        priceNow = bs.find('div', {'class':'price'}).get_text()
+        if len(priceNow) == 0 :
+            continue
+        priceNow = priceNow.split()[0]
+        priceNow = float(priceNow[1:].replace(',',''))
+        goalPrice = 0
+        flag=0
+        url = bs.find('tbody')
+        if url is None :
+            continue
+        for j in url.find_all('td'):
+            if flag == 1:
+                goalPrice = j.get_text()
+                if "N/A" in goalPrice:
+                    break
+                goalPrice = float(goalPrice[1:].replace(',',''))
+                break
+            if "Consensus Price" in j.get_text():
+                flag=1
+        if type(goalPrice) is not float:
+            continue
+        value = goalPrice * tuningValueN
+        if value > priceNow:
+            print("company name ", i)
+            resultStr += "company name = " + i + "\n"
+            howMuch = (value / priceNow) * 100
+            print(howMuch, "%")
+            resultStr += "percent = " + str(howMuch) + "\n"
 
 # main
 startTime = time.time()
 print("start time : ", startTime)
+resultStr += "tuningVal = " + str(tuningValue) + "\n"
+resultStr += "tuningVal(Nasdaq) = " + str(tuningValueN) + "\n"
 visitAllKospi(cacheCode.loadKospiCode())
 visitAllKosdaq(cacheCode.loadKosdaqCode())
+visitAllNasdaq(cacheCode.loadNasdaqCompany(nasdaqUrlBase))
 endTime = time.time()
 print("end time : ", endTime)
 print("total time :", endTime-startTime, "s")
-
 sendEmail.sendEmailTo(resultStr)
