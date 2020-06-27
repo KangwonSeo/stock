@@ -1,5 +1,6 @@
 import cacheCode
 import sendEmail
+import cacheInvest
 import requests
 import time
 from bs4 import BeautifulSoup
@@ -11,7 +12,7 @@ nasdaqUrlTail="/price-target/"
 today = datetime.now()
 tuningValue = 0.7
 tuningValueN = 0.5
-numOfDay = 15
+numOfDay = 20
 numReview=2
 resultStr = ""
 
@@ -62,6 +63,7 @@ def PrintInfo(Url):
         howMuch = (halfAver / priceNow) * 100
         print(howMuch, "%")
         resultStr += "percent = " + str(howMuch) + "\n"
+        resultStr += cacheInvest.askInvest(companyName) + "\n"
 
 def visitAllKospi(KospiList):
     global resultStr
@@ -102,6 +104,8 @@ def visitAllNasdaq(NasdaqList):
     global resultStr
     resultStr += "Nasdaq company\n"
     for i in NasdaqList:
+        if "TIVO" in i:
+            continue
         res = requests.get(nasdaqUrlBase+i+nasdaqUrlTail)
         bs = BeautifulSoup(res.content, "html.parser")
         priceNow = bs.find('div', {'class':'price'})
@@ -142,13 +146,16 @@ def visitAllNasdaq(NasdaqList):
             howMuch = (value / priceNow) * 100
             print(howMuch, "%")
             resultStr += "percent = " + str(howMuch) + "\n"
+
 # main
 startTime = time.time()
 print("start time : ", startTime)
 resultStr += "tuningVal = " + str(tuningValue) + "\n"
+resultStr += "numOfDay = " + str(numOfDay) + "\n"
 resultStr += "tuningVal(Nasdaq) = " + str(tuningValueN) + "\n"
-#visitAllKospi(cacheCode.loadKospiCode())
-#visitAllKosdaq(cacheCode.loadKosdaqCode())
+cacheInvest.cacheInvestInit()
+visitAllKospi(cacheCode.loadKospiCode())
+visitAllKosdaq(cacheCode.loadKosdaqCode())
 visitAllNasdaq(cacheCode.loadNasdaqCompany(nasdaqUrlBase))
 endTime = time.time()
 print("end time : ", endTime)
